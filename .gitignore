@@ -3,3 +3,7 @@
 !.gitignore
 !main.cpp
 !README.md
+!zipper.cpp
+!extractor.cpp
+!necessary.h
+!headerfiles.h
