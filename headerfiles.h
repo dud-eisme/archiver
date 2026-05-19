@@ -4,6 +4,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <functional>
 
 #pragma once
 #pragma pack(push, 1)

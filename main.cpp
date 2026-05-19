@@ -9,13 +9,13 @@ int main(int argc, char *argv[]) {
   }
 
   std::string cmd = argv[1];
-  std::string archive_name = argv[2];
+  std::string archive_path = argv[2];
 
   if (cmd == "a") {
-    zipper(argc - 2, argv, archive_name);
+    zipper(argc - 3, argv, archive_path);
   }
 
   else if (cmd == "x") {
-    extractor(archive_name);
+    extractor(archive_path);
   }
 }
