@@ -1,18 +1,19 @@
 #include "headerfiles.h"
 
-#define BUFFER_SIZE 4 * 1024 * 1024
-#define MAX_OCCUPIED_THREADS 4
-
 std::vector<struct Header> header_creation(int n_files, char *files[]) {
   std::vector<struct Header> header_list(n_files);
 
   uint64_t header_offset = 0;
   for (int i = 0; i < n_files; i++) {
     std::filesystem::path path = files[i + 3];
+    header_list[i].block.signature[0] = 'J';
+    header_list[i].block.signature[1] = 'O';
+    header_list[i].block.signature[2] = 'E';
+    header_list[i].block.signature[3] = 'Z';
     header_list[i].file_name = path.filename();
     header_list[i].block.file_name_len = header_list[i].file_name.length();
     header_list[i].block.file_size = std::filesystem::file_size(path);
-    header_offset += 17 + header_list[i].block.file_name_len;
+    header_offset += sizeof(struct DataBlock) + header_list[i].block.file_name_len;
   }
 
   uint64_t initial_offset = header_offset;
@@ -36,9 +37,13 @@ void header_write(std::string archive_name, int n_files,
   }
 
   archive.close();
+
+  struct Header last_header = header_list[n_files - 1];
+  uint64_t total_archive_size = last_header.block.data_offset + last_header.block.file_size;
+  std::filesystem::resize_file(archive_name, total_archive_size);
 }
 
-void zip_files(std::string archive_name, std::string file_name,
+void zip_file(std::string archive_name, std::string file_name,
                struct Header header, char &is_done) {
   std::fstream archive(archive_name,
                        std::ios::binary | std::ios::in | std::ios::out);
@@ -95,7 +100,7 @@ void multithreading_zipping(int n_files, char *files[],
     }
 
     active_indices.push_back(i);
-    active_threads.push_back(std::thread(zip_files, archive_name, path.string(),
+    active_threads.push_back(std::thread(zip_file, archive_name, path.string(),
                                          header_list[i],
                                          std::ref(finished_flags[i])));
   }
@@ -106,6 +111,8 @@ void multithreading_zipping(int n_files, char *files[],
 
 void zipper(int n_files, char *files[], std::string archive_name) {
   std::vector<struct Header> header_list = header_creation(n_files, files);
+  if (archive_name.find(".eisme") == std::string::npos)
+    archive_name += ".eisme";
   header_write(archive_name, n_files, header_list);
   multithreading_zipping(n_files, files, archive_name, header_list);
 }

@@ -5,7 +5,7 @@
 int main(int argc, char *argv[]) {
   if (argc < 3) {
     std::cout << "Usage:\n";
-    std::cout << "./z.ip a <archive_name>.zip <file(s)_or_folder>\n";
+    std::cout << "./z.ip a <archive_name> <file(s)_or_folder>\n";
   }
 
   std::string cmd = argv[1];
