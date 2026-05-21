@@ -2,6 +2,10 @@
 
 std::vector<struct Header> read_header(std::string archive_path) {
   std::ifstream archive(archive_path, std::ios::binary);
+  if (!archive.is_open()) {
+    std::cerr << "Error: Could not open archive: " << archive_path << '\n';
+    return {};
+  }
 
   std::vector<struct Header> header_list;
   char check_sig[4];
@@ -27,28 +31,32 @@ void extract_file(std::string archive_name, struct Header header,
                   char &is_done) {
   std::ifstream archive(archive_name, std::ios::binary);
   std::ofstream file(header.file_name, std::ios::binary);
-  if (!archive.is_open() || !file.is_open())
+  if (!archive.is_open() || !file.is_open()) {
+    is_done = true;
     return;
-
-  std::vector<char> buffer(BUFFER_SIZE);
-  archive.seekg(header.block.data_offset, std::ios::beg);
-  uint64_t bytes_remaining = header.block.file_size;
-  while (bytes_remaining > 0) {
-    uint64_t to_read = std::min((uint64_t)buffer.size(), bytes_remaining);
-
-    archive.read(buffer.data(), to_read);
-    size_t bytes_read = archive.gcount();
-
-    if (bytes_read == 0)
-      break;
-
-    file.write(buffer.data(), bytes_read);
-    bytes_remaining -= bytes_read;
   }
 
+  std::vector<char> compressed_data(header.block.compressed_size);
+  archive.seekg(header.block.data_offset, std::ios::beg);
+  archive.read(compressed_data.data(), header.block.compressed_size);
   archive.close();
-  file.close();
 
+  std::vector<char> uncompressed_data(header.block.file_size);
+
+  uLongf target_size = header.block.file_size;
+  int result = uncompress(
+      reinterpret_cast<Bytef *>(uncompressed_data.data()), &target_size,
+      reinterpret_cast<const Bytef *>(compressed_data.data()),
+      header.block.compressed_size);
+
+  if (result == Z_OK) {
+    file.write(uncompressed_data.data(), target_size);
+  } else {
+    std::cerr << "Extraction failed (decompression error) for: "
+              << header.file_name << "\n";
+  }
+
+  file.close();
   is_done = true;
 }
 
